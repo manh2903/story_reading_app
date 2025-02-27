@@ -39,7 +39,7 @@
             android:inputType="textPassword"
             app:boxBackgroundColor="@color/white"
             app:boxBackgroundMode="outline"
-            app:startIconDrawable="@drawable/baseline_email_24"
+            app:startIconDrawable="@drawable/baseline_person_24"
             app:startIconTint="@color/teal_700">
 
             <com.google.android.material.textfield.TextInputEditText

@@ -1,17 +1,24 @@
 package com.ndm.stotyreading.fragment;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.ndm.stotyreading.R;
+import com.ndm.stotyreading.activity.ActivityStoryChapter;
 import com.ndm.stotyreading.api.ApiService;
 import com.ndm.stotyreading.api.RetrofitClient;
 import com.ndm.stotyreading.base.BaseFragment;
-import com.ndm.stotyreading.enitities.ChapterContentResponse;
+import com.ndm.stotyreading.enitities.detailChapter.ChapterContentResponse;
+import com.ndm.stotyreading.enitities.story.Chapter;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -19,29 +26,29 @@ import retrofit2.Response;
 
 public class ChapterDetailFragment extends BaseFragment {
 
-    private static final String ARG_CHAPTER_ID = "chapter_id";
-    private String chapterId;
+    private static final String ARG_CHAPTER_ID = "chapter";
+    private Chapter chapter;
+    private WebView webView;
 
-    // Constructor mặc định
     public ChapterDetailFragment() {
-        // Required empty public constructor
+        // Constructor rỗng bắt buộc
     }
 
-    // Phương thức factory để tạo instance với chapterId
-    public static ChapterDetailFragment newInstance(String chapterId) {
+    public static ChapterDetailFragment newInstance(Chapter chapter) {
         ChapterDetailFragment fragment = new ChapterDetailFragment();
         Bundle args = new Bundle();
-        args.putString(ARG_CHAPTER_ID, chapterId);
+        args.putParcelable(ARG_CHAPTER_ID, chapter);
         fragment.setArguments(args);
         return fragment;
     }
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            chapterId = getArguments().getString(ARG_CHAPTER_ID);
+            chapter = getArguments().getParcelable(ARG_CHAPTER_ID);
         }
+        super.onCreate(savedInstanceState);
     }
 
     @Override
@@ -61,72 +68,106 @@ public class ChapterDetailFragment extends BaseFragment {
 
     @Override
     protected int getWebViewId() {
-        return R.id.web_view;
+        return -1; // We're creating WebView dynamically, not from layout
     }
 
     @Override
     protected void initView(View view) {
         super.initView(view);
 
-        // Thiết lập tiêu đề toolbar
-        setTitle("Chương " + chapterId);
+        setTitle("Chương " + chapter.getId() + ": " + chapter.getTitle());
 
-        // Hiển thị chapterId trong TextView nếu có
-        TextView tvChapterId = view.findViewById(R.id.tvChapterId);
-        if (tvChapterId != null) {
-            tvChapterId.setText("Chapter ID: " + chapterId);
-        }
+//        TextView tvTitle = view.findViewById(R.id.tv_title);
+//        if (tvTitle != null) {
+//            tvTitle.setText("Chapter ID: " + chapter.getId());
+//        }
 
-        // Cấu hình WebView
-        WebView webView = view.findViewById(getWebViewId());
-        if (webView != null) {
-            webView.setVisibility(View.VISIBLE);
-            webView.getSettings().setJavaScriptEnabled(true);
-            webView.getSettings().setBuiltInZoomControls(true);
-            webView.getSettings().setDisplayZoomControls(false);
+        FrameLayout container = view.findViewById(R.id.web_view_container);
+        if (container != null) {
+            try {
+                // Tạo WebView động
+                webView = new WebView(getContext());
+                webView.setLayoutParams(new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+                webView.setVisibility(View.VISIBLE);
+                webView.getSettings().setJavaScriptEnabled(true);
+                webView.getSettings().setBuiltInZoomControls(true);
+                webView.getSettings().setDisplayZoomControls(false);
+                webView.getSettings().setLoadWithOverviewMode(true);
+                webView.getSettings().setUseWideViewPort(true);
 
-            // Thêm cài đặt để tự động điều chỉnh kích thước chữ
-            webView.getSettings().setLoadWithOverviewMode(true);
-            webView.getSettings().setUseWideViewPort(true);
+                // Thêm WebView vào container
+                container.addView(webView);
+            } catch (Exception e) {
+                Log.e("WebViewError", "Lỗi khi khởi tạo WebView: " + e.getMessage());
+                showFallbackMessage(container);
+            }
         }
     }
 
     @Override
     protected void initData() {
         super.initData();
+        loadChapterContent();
+    }
 
-        // Lấy token từ SharedPreferences
+    @Override
+    protected void handleBackPress() {
+        // Lấy activity chứa fragment
+        ActivityStoryChapter activity = (ActivityStoryChapter) getActivity();
+        if (activity != null) {
+            // Ẩn fragmentContainer và hiển thị lại mainContentScrollView
+            activity.findViewById(R.id.fragmentContainer).setVisibility(View.GONE);
+            activity.findViewById(R.id.mainContentScrollView).setVisibility(View.VISIBLE);
+
+            // Xóa fragment khỏi back stack
+            if (requireActivity().getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                requireActivity().getSupportFragmentManager().popBackStack();
+            }
+        }
+    }
+
+
+    private void loadChapterContent() {
+        // Kiểm tra chapterId trước khi gọi API
+        if (chapter == null) {
+            showToast("Không có chapterId để tải dữ liệu");
+            hideLoading();
+            return;
+        }
+
         SharedPreferences prefs = getActivity().getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
         String token = prefs.getString("token", null);
 
-        // Tạo API Service
         ApiService apiService = RetrofitClient.getClient().create(ApiService.class);
 
-        // Hiển thị loading
         showLoading();
 
-        // Gọi API để lấy nội dung chương
-        apiService.getChapterContent("Bearer " + token, chapterId).enqueue(new Callback<ChapterContentResponse>() {
+        // Sử dụng chapterId từ instance variable thay vì hardcode
+        apiService.getChapterContent("Bearer " + token, chapter.getId()).enqueue(new Callback<ChapterContentResponse>() {
             @Override
             public void onResponse(Call<ChapterContentResponse> call, Response<ChapterContentResponse> response) {
                 hideLoading();
                 if (response.isSuccessful() && response.body() != null) {
                     ChapterContentResponse contentResponse = response.body();
                     if (contentResponse.isSuccess()) {
-                        // Lấy nội dung HTML
                         String htmlContent = contentResponse.getContent();
+                        Log.d("content", htmlContent);
 
-                        // Tìm WebView và hiển thị nội dung
-                        WebView webView = getView().findViewById(getWebViewId());
                         if (webView != null) {
-                            // Tạo CSS để định dạng nội dung
-                            String formattedHtml =htmlContent;
-
-                            // Tải nội dung HTML đã định dạng
-                            webView.loadDataWithBaseURL(null, formattedHtml, "text/html", "UTF-8", null);
+                            try {
+                                String formattedHtml = htmlContent;
+                                webView.loadDataWithBaseURL(null, formattedHtml, "text/html", "UTF-8", null);
+                            } catch (Exception e) {
+                                Log.e("WebViewError", "Lỗi khi tải nội dung: " + e.getMessage());
+                                webView.setVisibility(View.GONE);
+                                showFallbackContent(htmlContent);
+                            }
+                        } else {
+                            showFallbackContent(htmlContent);
                         }
                     } else {
-                        // Hiển thị thông báo lỗi
                         showToast(contentResponse.getMessage() != null ?
                                 contentResponse.getMessage() : "Không thể tải nội dung chương");
                     }
@@ -143,15 +184,50 @@ public class ChapterDetailFragment extends BaseFragment {
         });
     }
 
+    private void showFallbackMessage(ViewGroup container) {
+        TextView fallbackText = new TextView(getContext());
+        fallbackText.setText("Không thể hiển thị nội dung do WebView không khả dụng. Vui lòng cập nhật hoặc cài đặt WebView từ Play Store.");
+        fallbackText.setTextSize(16);
+        fallbackText.setPadding(16, 16, 16, 16);
+        container.addView(fallbackText);
+        showToast("Vui lòng cập nhật hoặc cài đặt WebView từ Play Store.");
+        promptInstallWebView();
+    }
+
+    private void showFallbackContent(String htmlContent) {
+        FrameLayout container = getView().findViewById(R.id.web_view_container);
+        if (container != null) {
+            TextView contentTextView = new TextView(getContext());
+            contentTextView.setText(android.text.Html.fromHtml(htmlContent, android.text.Html.FROM_HTML_MODE_COMPACT));
+            contentTextView.setTextSize(16);
+            contentTextView.setPadding(16, 16, 16, 16);
+            container.addView(contentTextView);
+        }
+    }
+
+    private void promptInstallWebView() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse("market://details?id=com.google.android.webview"));
+            startActivity(intent);
+        } catch (Exception e) {
+            showToast("Không thể mở Play Store. Vui lòng cài đặt Android System WebView thủ công.");
+        }
+    }
+
     @Override
     protected void handleEvent() {
         super.handleEvent();
-        // Xử lý sự kiện đã được xử lý trong BaseFragment
     }
 
     @Override
     protected void observerData() {
         super.observerData();
-        // Để trống vì không cần theo dõi dữ liệu khác
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        webView = null; // Xóa tham chiếu để tránh rò rỉ bộ nhớ
     }
 }

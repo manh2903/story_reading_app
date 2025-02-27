@@ -66,6 +66,7 @@ public class ActivityStoryChapter extends AppCompatActivity {
 
         // Gọi API lấy thông tin truyện
         loadStoryDetails();
+//        isWebViewAvailable();
         
     }
     private void loadStoryDetails() {
@@ -91,11 +92,6 @@ public class ActivityStoryChapter extends AppCompatActivity {
                         tvRating.setText("Đánh giá: " + storyChapterRespone.getStory().getRating());
 
                         // Tải ảnh bìa bằng Glide
-//                        Glide.with(ActivityStoryChapter.this)
-//                                .load(storyChapterRespone.getStory().getCoverImage())
-//                                .placeholder(R.drawable.placeholder_image) // Ảnh placeholder nếu chưa tải xong
-//                                .error(R.drawable.error_image) // Ảnh hiển thị nếu lỗi
-//                                .into(ivCoverImage);
 
                         Glide.with(ActivityStoryChapter.this)
                                 .load(storyChapterRespone.getStory().getCoverImage())
@@ -122,13 +118,13 @@ public class ActivityStoryChapter extends AppCompatActivity {
         });
     }
 
-    public void onChapterClick(String chapterId) {
+    public void onChapterClick(Chapter chapter) {
         // Show the fragment container and hide the main content
         findViewById(R.id.fragmentContainer).setVisibility(View.VISIBLE);
         findViewById(R.id.mainContentScrollView).setVisibility(View.GONE);
 
         // Replace the FrameLayout with ChapterDetailFragment
-        Fragment chapterDetailFragment = ChapterDetailFragment.newInstance(chapterId);
+        Fragment chapterDetailFragment = ChapterDetailFragment.newInstance(chapter);
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentContainer, chapterDetailFragment)
                 .addToBackStack(null) // Add to back stack to allow back navigation

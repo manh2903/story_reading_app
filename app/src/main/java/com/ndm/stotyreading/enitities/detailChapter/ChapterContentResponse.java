@@ -1,4 +1,4 @@
-package com.ndm.stotyreading.enitities;
+package com.ndm.stotyreading.enitities.detailChapter;
 
 public class ChapterContentResponse {
     private boolean success;

@@ -51,6 +51,9 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         tv_forgot_pw = findViewById(R.id.tv_forgot_pass);
         tv_forgot_pw.setVisibility(View.GONE);
+
+        txtEmail.setText("user1");
+        txtPassEdt.setText("123");
     }
 
     private void initListener() {

@@ -1,7 +1,7 @@
 package com.ndm.stotyreading.api;
 
 
-import com.ndm.stotyreading.enitities.ChapterContentResponse;
+import com.ndm.stotyreading.enitities.detailChapter.ChapterContentResponse;
 import com.ndm.stotyreading.enitities.story.StoryChapterRespone;
 import com.ndm.stotyreading.enitities.story.StoryResponse;
 import com.ndm.stotyreading.enitities.user.LoginRequest;

@@ -1,8 +1,13 @@
 package com.ndm.stotyreading.enitities.story;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import androidx.annotation.NonNull;
+
 import java.util.List;
 
-public class Chapter {
+public class Chapter implements Parcelable {
     private String id;
     private String story_id;
     private int chapter_number;
@@ -42,5 +47,15 @@ public class Chapter {
 
     public List<ChapterImage> getChapterImages() {
         return chapterImages;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+
     }
 }
