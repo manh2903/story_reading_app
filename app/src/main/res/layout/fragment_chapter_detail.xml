@@ -64,4 +64,48 @@
 
         </LinearLayout>
     </FrameLayout>
+
+    <!-- Footer với nút Previous, số chương, và nút Next -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="@color/colorPrimaryDark"
+        android:gravity="center_vertical">
+
+        <!-- Nút Previous Chapter -->
+        <Button
+            android:id="@+id/btn_previous_chapter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Chương trước"
+            android:textSize="14sp"
+            android:backgroundTint="@android:color/white"
+            android:textColor="@android:color/black" />
+
+        <!-- TextView hiển thị số chương hiện tại / tổng số chương -->
+        <TextView
+            android:id="@+id/tv_chapter_counter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:text="Chương 1/10"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:text="Chương 1/10" />
+
+        <!-- Nút Next Chapter -->
+        <Button
+            android:id="@+id/btn_next_chapter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Chương tiếp"
+            android:textSize="14sp"
+            android:backgroundTint="@android:color/white"
+            android:textColor="@android:color/black" />
+    </LinearLayout>
 </LinearLayout>

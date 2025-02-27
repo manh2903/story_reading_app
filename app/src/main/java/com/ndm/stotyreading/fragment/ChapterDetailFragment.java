@@ -8,7 +8,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
@@ -20,6 +22,9 @@ import com.ndm.stotyreading.base.BaseFragment;
 import com.ndm.stotyreading.enitities.detailChapter.ChapterContentResponse;
 import com.ndm.stotyreading.enitities.story.Chapter;
 
+import java.io.Serializable;
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -27,26 +32,40 @@ import retrofit2.Response;
 public class ChapterDetailFragment extends BaseFragment {
 
     private static final String ARG_CHAPTER_ID = "chapter";
-    private Chapter chapter;
+    private static final String TAG = "ChapterDetailFragment";
+
+    // Các biến liên quan đến dữ liệu chương
+    private String chapterId;
+    private List<Chapter> chapterList;
+    private int currentChapterNumber;
+    private String currentChapterTitle;
+    private int totalChapters;
+
+    // Các view
     private WebView webView;
+    private Button btnPreviousChapter;
+    private Button btnNextChapter;
+    private TextView tvChapterCounter;
 
-    public ChapterDetailFragment() {
-        // Constructor rỗng bắt buộc
-    }
-
-    public static ChapterDetailFragment newInstance(Chapter chapter) {
+    // Factory method để tạo instance mới
+    public static ChapterDetailFragment newInstance(String chapterId, List<Chapter> chapters) {
         ChapterDetailFragment fragment = new ChapterDetailFragment();
         Bundle args = new Bundle();
-        args.putParcelable(ARG_CHAPTER_ID, chapter);
+        args.putString(ARG_CHAPTER_ID, chapterId);
+        args.putSerializable("chapter_list", (Serializable) chapters);
         fragment.setArguments(args);
         return fragment;
     }
 
+    //region Lifecycle Methods
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         if (getArguments() != null) {
-            chapter = getArguments().getParcelable(ARG_CHAPTER_ID);
+            chapterId = getArguments().getString(ARG_CHAPTER_ID);
+            chapterList = (List<Chapter>) getArguments().getSerializable("chapter_list");
+            totalChapters = chapterList != null ? chapterList.size() : 0;
+            updateCurrentChapterInfo(chapterId);
         }
         super.onCreate(savedInstanceState);
     }
@@ -68,42 +87,16 @@ public class ChapterDetailFragment extends BaseFragment {
 
     @Override
     protected int getWebViewId() {
-        return -1; // We're creating WebView dynamically, not from layout
+        return -1; // WebView được tạo động
     }
 
     @Override
     protected void initView(View view) {
         super.initView(view);
-
-        setTitle("Chương " + chapter.getId() + ": " + chapter.getTitle());
-
-//        TextView tvTitle = view.findViewById(R.id.tv_title);
-//        if (tvTitle != null) {
-//            tvTitle.setText("Chapter ID: " + chapter.getId());
-//        }
-
-        FrameLayout container = view.findViewById(R.id.web_view_container);
-        if (container != null) {
-            try {
-                // Tạo WebView động
-                webView = new WebView(getContext());
-                webView.setLayoutParams(new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT));
-                webView.setVisibility(View.VISIBLE);
-                webView.getSettings().setJavaScriptEnabled(true);
-                webView.getSettings().setBuiltInZoomControls(true);
-                webView.getSettings().setDisplayZoomControls(false);
-                webView.getSettings().setLoadWithOverviewMode(true);
-                webView.getSettings().setUseWideViewPort(true);
-
-                // Thêm WebView vào container
-                container.addView(webView);
-            } catch (Exception e) {
-                Log.e("WebViewError", "Lỗi khi khởi tạo WebView: " + e.getMessage());
-                showFallbackMessage(container);
-            }
-        }
+        setupToolbar(view);
+        setupWebView(view);
+        setupNavigationButtons(view);
+        updateChapterDisplay();
     }
 
     @Override
@@ -113,64 +106,87 @@ public class ChapterDetailFragment extends BaseFragment {
     }
 
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        webView = null; // Ngăn rò rỉ bộ nhớ
+    }
+
+    //endregion
+
+    //region Event Handling
+
+    @Override
+    protected void handleEvent() {
+        super.handleEvent();
+        btnPreviousChapter.setOnClickListener(v -> navigateToPreviousChapter());
+        btnNextChapter.setOnClickListener(v -> navigateToNextChapter());
+    }
+
+    @Override
     protected void handleBackPress() {
-        // Lấy activity chứa fragment
         ActivityStoryChapter activity = (ActivityStoryChapter) getActivity();
         if (activity != null) {
-            // Ẩn fragmentContainer và hiển thị lại mainContentScrollView
             activity.findViewById(R.id.fragmentContainer).setVisibility(View.GONE);
             activity.findViewById(R.id.mainContentScrollView).setVisibility(View.VISIBLE);
-
-            // Xóa fragment khỏi back stack
-            if (requireActivity().getSupportFragmentManager().getBackStackEntryCount() > 0) {
-                requireActivity().getSupportFragmentManager().popBackStack();
-            }
+            popBackStackIfNeeded();
         }
     }
 
+    //endregion
+
+    //region Helper Methods
+
+    private void setupToolbar(View view) {
+        setTitle("Chương " + currentChapterNumber + ": " + currentChapterTitle);
+    }
+
+    private void setupWebView(View view) {
+        FrameLayout container = view.findViewById(R.id.web_view_container);
+        if (container == null) return;
+
+        try {
+            webView = new WebView(getContext());
+            webView.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT));
+            WebSettings settings = webView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setBuiltInZoomControls(true);
+            settings.setDisplayZoomControls(false);
+            settings.setLoadWithOverviewMode(true);
+            settings.setUseWideViewPort(true);
+            webView.setVisibility(View.VISIBLE);
+            container.addView(webView);
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing WebView: " + e.getMessage());
+            showFallbackMessage(container);
+        }
+    }
+
+    private void setupNavigationButtons(View view) {
+        btnPreviousChapter = view.findViewById(R.id.btn_previous_chapter);
+        btnNextChapter = view.findViewById(R.id.btn_next_chapter);
+        tvChapterCounter = view.findViewById(R.id.tv_chapter_counter);
+    }
 
     private void loadChapterContent() {
-        // Kiểm tra chapterId trước khi gọi API
-        if (chapter == null) {
+        if (chapterId == null) {
             showToast("Không có chapterId để tải dữ liệu");
             hideLoading();
             return;
         }
 
-        SharedPreferences prefs = getActivity().getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireActivity().getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
         String token = prefs.getString("token", null);
-
         ApiService apiService = RetrofitClient.getClient().create(ApiService.class);
 
         showLoading();
-
-        // Sử dụng chapterId từ instance variable thay vì hardcode
-        apiService.getChapterContent("Bearer " + token, chapter.getId()).enqueue(new Callback<ChapterContentResponse>() {
+        apiService.getChapterContent("Bearer " + token, chapterId).enqueue(new Callback<ChapterContentResponse>() {
             @Override
             public void onResponse(Call<ChapterContentResponse> call, Response<ChapterContentResponse> response) {
                 hideLoading();
                 if (response.isSuccessful() && response.body() != null) {
-                    ChapterContentResponse contentResponse = response.body();
-                    if (contentResponse.isSuccess()) {
-                        String htmlContent = contentResponse.getContent();
-                        Log.d("content", htmlContent);
-
-                        if (webView != null) {
-                            try {
-                                String formattedHtml = htmlContent;
-                                webView.loadDataWithBaseURL(null, formattedHtml, "text/html", "UTF-8", null);
-                            } catch (Exception e) {
-                                Log.e("WebViewError", "Lỗi khi tải nội dung: " + e.getMessage());
-                                webView.setVisibility(View.GONE);
-                                showFallbackContent(htmlContent);
-                            }
-                        } else {
-                            showFallbackContent(htmlContent);
-                        }
-                    } else {
-                        showToast(contentResponse.getMessage() != null ?
-                                contentResponse.getMessage() : "Không thể tải nội dung chương");
-                    }
+                    handleSuccessfulResponse(response.body());
                 } else {
                     showToast("Không thể tải nội dung chương");
                 }
@@ -184,6 +200,26 @@ public class ChapterDetailFragment extends BaseFragment {
         });
     }
 
+    private void handleSuccessfulResponse(ChapterContentResponse contentResponse) {
+        if (contentResponse.isSuccess()) {
+            String htmlContent = contentResponse.getContent();
+            Log.d(TAG, "Content loaded: " + htmlContent);
+            if (webView != null) {
+                try {
+                    webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error loading content into WebView: " + e.getMessage());
+                    webView.setVisibility(View.GONE);
+                    showFallbackContent(htmlContent);
+                }
+            } else {
+                showFallbackContent(htmlContent);
+            }
+        } else {
+            showToast(contentResponse.getMessage() != null ? contentResponse.getMessage() : "Không thể tải nội dung chương");
+        }
+    }
+
     private void showFallbackMessage(ViewGroup container) {
         TextView fallbackText = new TextView(getContext());
         fallbackText.setText("Không thể hiển thị nội dung do WebView không khả dụng. Vui lòng cập nhật hoặc cài đặt WebView từ Play Store.");
@@ -195,7 +231,7 @@ public class ChapterDetailFragment extends BaseFragment {
     }
 
     private void showFallbackContent(String htmlContent) {
-        FrameLayout container = getView().findViewById(R.id.web_view_container);
+        FrameLayout container = requireView().findViewById(R.id.web_view_container);
         if (container != null) {
             TextView contentTextView = new TextView(getContext());
             contentTextView.setText(android.text.Html.fromHtml(htmlContent, android.text.Html.FROM_HTML_MODE_COMPACT));
@@ -215,19 +251,63 @@ public class ChapterDetailFragment extends BaseFragment {
         }
     }
 
-    @Override
-    protected void handleEvent() {
-        super.handleEvent();
+    private void updateCurrentChapterInfo(String chapterId) {
+        if (chapterList == null) return;
+        for (Chapter chapter : chapterList) {
+            if (chapter.getId().equals(chapterId)) {
+                currentChapterNumber = chapter.getChapterNumber();
+                currentChapterTitle = chapter.getTitle();
+                return;
+            }
+        }
+        currentChapterNumber = 1; // Giá trị mặc định
+        currentChapterTitle = "";
     }
 
-    @Override
-    protected void observerData() {
-        super.observerData();
+    private int findIndexByChapterNumber(int chapterNumber) {
+        if (chapterList == null) return -1;
+        for (int i = 0; i < chapterList.size(); i++) {
+            if (chapterList.get(i).getChapterNumber() == chapterNumber) {
+                return i;
+            }
+        }
+        return -1;
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        webView = null; // Xóa tham chiếu để tránh rò rỉ bộ nhớ
+    private void updateChapterDisplay() {
+        tvChapterCounter.setText("Chương " + currentChapterNumber + "/" + totalChapters);
+        setTitle("Chương " + currentChapterNumber + ": " + currentChapterTitle);
     }
+
+    private void navigateToPreviousChapter() {
+        int previousIndex = findIndexByChapterNumber(currentChapterNumber - 1);
+        if (previousIndex >= 0) {
+            chapterId = chapterList.get(previousIndex).getId();
+            updateCurrentChapterInfo(chapterId);
+            loadChapterContent();
+            updateChapterDisplay();
+        } else {
+            showToast("Đây là chương đầu tiên!");
+        }
+    }
+
+    private void navigateToNextChapter() {
+        int nextIndex = findIndexByChapterNumber(currentChapterNumber + 1);
+        if (nextIndex >= 0 && nextIndex < totalChapters) {
+            chapterId = chapterList.get(nextIndex).getId();
+            updateCurrentChapterInfo(chapterId);
+            loadChapterContent();
+            updateChapterDisplay();
+        } else {
+            showToast("Đây là chương cuối cùng!");
+        }
+    }
+
+    private void popBackStackIfNeeded() {
+        if (requireActivity().getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            requireActivity().getSupportFragmentManager().popBackStack();
+        }
+    }
+
+    //endregion
 }

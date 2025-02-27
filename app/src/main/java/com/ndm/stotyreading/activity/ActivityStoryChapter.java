@@ -118,13 +118,13 @@ public class ActivityStoryChapter extends AppCompatActivity {
         });
     }
 
-    public void onChapterClick(Chapter chapter) {
+    public void onChapterClick(String chapterID, List<Chapter> chapterList) {
         // Show the fragment container and hide the main content
         findViewById(R.id.fragmentContainer).setVisibility(View.VISIBLE);
         findViewById(R.id.mainContentScrollView).setVisibility(View.GONE);
 
         // Replace the FrameLayout with ChapterDetailFragment
-        Fragment chapterDetailFragment = ChapterDetailFragment.newInstance(chapter);
+        Fragment chapterDetailFragment = ChapterDetailFragment.newInstance(chapterID, chapterList);
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentContainer, chapterDetailFragment)
                 .addToBackStack(null) // Add to back stack to allow back navigation

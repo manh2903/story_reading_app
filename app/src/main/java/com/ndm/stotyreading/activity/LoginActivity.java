@@ -52,8 +52,8 @@ public class LoginActivity extends AppCompatActivity {
         tv_forgot_pw = findViewById(R.id.tv_forgot_pass);
         tv_forgot_pw.setVisibility(View.GONE);
 
-        txtEmail.setText("user1");
-        txtPassEdt.setText("123");
+//        txtEmail.setText("user1");
+//        txtPassEdt.setText("123");
     }
 
     private void initListener() {

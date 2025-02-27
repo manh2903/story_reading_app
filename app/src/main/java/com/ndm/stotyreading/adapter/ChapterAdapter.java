@@ -20,7 +20,7 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ChapterV
 
     // Define the listener interface
     public interface OnChapterClickListener {
-        void onChapterClick(Chapter chapterId);
+        void onChapterClick(String chapterId, List<Chapter> chapterList);
     }
 
 
@@ -47,7 +47,7 @@ public class ChapterAdapter extends RecyclerView.Adapter<ChapterAdapter.ChapterV
         // Xử lý sự kiện click vào chương (nếu cần)
         holder.itemView.setOnClickListener(v -> {
             if (onChapterClickListener != null) {
-                onChapterClickListener.onChapterClick(chapter); // Assuming Chapter has getId()
+                onChapterClickListener.onChapterClick(chapter.getId(), chapterList); // Assuming Chapter has getId()
             }
         });
     }

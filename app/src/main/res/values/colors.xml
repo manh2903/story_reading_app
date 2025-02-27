@@ -12,4 +12,5 @@
     <color name="primary_text_color">#212121</color>
     <color name="secondary_text_color">#757575</color>
     <color name="button_color">#FF5722</color>
+    <color name="colorPrimaryDark">#303F9F</color>
 </resources>

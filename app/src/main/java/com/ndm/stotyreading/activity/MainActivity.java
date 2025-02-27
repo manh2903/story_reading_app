@@ -137,7 +137,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             startActivity(intent);
             finish();
         } else if (id == R.id.nav_logo_out) {
-//            handleLogout();
+            clearToken();
+            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+            startActivity(intent);
         } else if (id == R.id.nav_setting) {
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             startActivity(intent);
@@ -145,8 +147,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_post) {
-//            Intent intent = new Intent(getApplicationContext(), PostActitivy.class);
-//            startActivity(intent);
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            startActivity(intent);
         }
         mDrawerLayout.closeDrawer(GravityCompat.START);
         return true;
@@ -178,6 +180,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 Toast.makeText(MainActivity.this, "Không thể kết nối đến server", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void clearToken() {
+        SharedPreferences prefs = getSharedPreferences("user_prefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.remove("token");
+        editor.apply();
     }
 }
 

@@ -16,6 +16,12 @@ import retrofit2.http.Path;
 
 
 public interface ApiService {
+
+    @GET("auth/profile")
+    Call<LoginResponse.User> auth(
+            @Header("Authorization") String token
+    );
+
     @POST("auth/login")
     Call<LoginResponse> login(@Body LoginRequest loginRequest);
 
